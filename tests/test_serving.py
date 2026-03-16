@@ -1,12 +1,11 @@
 """Unit tests for the serving layer (no model loaded — uses mocks)."""
 import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 
-# ── Fixture: mock heavy dependencies before importing app ────────────────────
 @pytest.fixture(autouse=True)
-def mock_mlflow_and_joblib(monkeypatch):
+def mock_artifacts(monkeypatch):
     fake_model = MagicMock()
     fake_model.predict.return_value = np.array([1])
     fake_model.predict_proba.return_value = np.array([[0.2, 0.8]])
@@ -14,9 +13,9 @@ def mock_mlflow_and_joblib(monkeypatch):
     fake_scaler = MagicMock()
     fake_scaler.transform.side_effect = lambda x: x
 
-    monkeypatch.setattr("mlflow.xgboost.load_model", lambda *a, **kw: fake_model)
-    monkeypatch.setattr("joblib.load", lambda *a, **kw: fake_scaler)
-    monkeypatch.setattr("mlflow.set_tracking_uri", lambda *a, **kw: None)
+    import src.serving.app as app_module
+    monkeypatch.setattr(app_module, "get_model", lambda: fake_model)
+    monkeypatch.setattr(app_module, "get_scaler", lambda: fake_scaler)
 
 
 @pytest.fixture

@@ -1,40 +1,62 @@
 """
 FastAPI inference endpoint.
-Loads the latest MLflow model + scaler and serves predictions.
+Loads the latest MLflow model + scaler on first request (lazy load).
 """
 import os
 import joblib
 import mlflow.xgboost
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from pydantic import BaseModel, Field
 
-app = FastAPI(title="Heart Disease Predictor", version="1.0")
-
-# ── Load artifacts at startup ────────────────────────────────────────────────
-MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "http://localhost:5000")
+# ── Config ───────────────────────────────────────────────────────────────────
+MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlruns/mlflow.db")
 MODEL_URI = os.getenv("MODEL_URI", "models:/heart-disease-prediction/Production")
 SCALER_PATH = os.getenv("SCALER_PATH", "models/scaler.joblib")
 
-mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-model = mlflow.xgboost.load_model(MODEL_URI)
-scaler = joblib.load(SCALER_PATH)
+_model = None
+_scaler = None
+
+
+def get_model():
+    global _model
+    if _model is None:
+        mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+        _model = mlflow.xgboost.load_model(MODEL_URI)
+    return _model
+
+
+def get_scaler():
+    global _scaler
+    if _scaler is None:
+        _scaler = joblib.load(SCALER_PATH)
+    return _scaler
+
+
+app = FastAPI(title="Heart Disease Predictor", version="1.0")
 
 
 class PatientFeatures(BaseModel):
-    age: float = Field(..., example=52)
-    sex: int = Field(..., ge=0, le=1, example=1)
-    cp: int = Field(..., ge=0, le=3, example=0)
-    trestbps: float = Field(..., example=125)
-    chol: float = Field(..., example=212)
-    fbs: int = Field(..., ge=0, le=1, example=0)
-    restecg: int = Field(..., ge=0, le=2, example=1)
-    thalach: float = Field(..., example=168)
-    exang: int = Field(..., ge=0, le=1, example=0)
-    oldpeak: float = Field(..., example=1.0)
-    slope: int = Field(..., ge=0, le=2, example=2)
-    ca: int = Field(..., ge=0, le=4, example=2)
-    thal: int = Field(..., ge=0, le=3, example=3)
+    model_config = {"json_schema_extra": {"example": {
+        "age": 52, "sex": 1, "cp": 0, "trestbps": 125, "chol": 212,
+        "fbs": 0, "restecg": 1, "thalach": 168, "exang": 0,
+        "oldpeak": 1.0, "slope": 2, "ca": 2, "thal": 3,
+    }}}
+
+    age: float
+    sex: int = Field(..., ge=0, le=1)
+    cp: int = Field(..., ge=0, le=3)
+    trestbps: float
+    chol: float
+    fbs: int = Field(..., ge=0, le=1)
+    restecg: int = Field(..., ge=0, le=2)
+    thalach: float
+    exang: int = Field(..., ge=0, le=1)
+    oldpeak: float
+    slope: int = Field(..., ge=0, le=2)
+    ca: int = Field(..., ge=0, le=4)
+    thal: int = Field(..., ge=0, le=3)
 
 
 class Prediction(BaseModel):
@@ -55,9 +77,9 @@ def predict(patient: PatientFeatures):
         patient.chol, patient.fbs, patient.restecg, patient.thalach,
         patient.exang, patient.oldpeak, patient.slope, patient.ca, patient.thal,
     ]])
-    features_scaled = scaler.transform(features)
-    pred = int(model.predict(features_scaled)[0])
-    prob = float(model.predict_proba(features_scaled)[0][1])
+    features_scaled = get_scaler().transform(features)
+    pred = int(get_model().predict(features_scaled)[0])
+    prob = float(get_model().predict_proba(features_scaled)[0][1])
 
     return Prediction(
         prediction=pred,

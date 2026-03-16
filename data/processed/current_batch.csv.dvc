@@ -1,0 +1,5 @@
+outs:
+- md5: f23b69cc910a1073b15ea01320dacfb3
+  size: 4170
+  hash: md5
+  path: current_batch.csv

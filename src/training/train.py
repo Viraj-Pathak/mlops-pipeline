@@ -16,6 +16,7 @@ from src.training.data_utils import load_data, preprocess
 
 
 def train(data_path: str, n_estimators: int = 100, max_depth: int = 4, lr: float = 0.1):
+    mlflow.set_tracking_uri("sqlite:///mlruns/mlflow.db")
     mlflow.set_experiment("heart-disease-prediction")
 
     with mlflow.start_run():
@@ -34,7 +35,6 @@ def train(data_path: str, n_estimators: int = 100, max_depth: int = 4, lr: float
             "n_estimators": n_estimators,
             "max_depth": max_depth,
             "learning_rate": lr,
-            "use_label_encoder": False,
             "eval_metric": "logloss",
             "random_state": 42,
         }
@@ -56,7 +56,7 @@ def train(data_path: str, n_estimators: int = 100, max_depth: int = 4, lr: float
         print(metrics)
 
         # ── Artifacts ─────────────────────────────────────────────────────────
-        mlflow.xgboost.log_model(model, "model")
+        mlflow.xgboost.log_model(model, name="model")
 
         # Save scaler for the serving layer
         import joblib, os
