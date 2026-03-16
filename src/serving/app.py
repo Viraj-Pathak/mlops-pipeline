@@ -3,10 +3,10 @@ FastAPI inference endpoint.
 Loads the latest MLflow model + scaler on first request (lazy load).
 """
 import os
+
 import joblib
 import mlflow.xgboost
 import numpy as np
-from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from pydantic import BaseModel, Field
 

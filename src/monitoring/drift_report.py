@@ -6,11 +6,11 @@ Outputs an HTML report to reports/ and prints a drift summary.
 import argparse
 import json
 import os
-import pandas as pd
 
-from evidently import Report, Dataset, DataDefinition
-from evidently.presets import DataDriftPreset
+import pandas as pd
+from evidently import DataDefinition, Dataset, Report
 from evidently.metrics import DriftedColumnsCount
+from evidently.presets import DataDriftPreset
 
 from src.training.data_utils import FEATURE_COLS
 

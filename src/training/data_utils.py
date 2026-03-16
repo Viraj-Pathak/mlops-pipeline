@@ -3,10 +3,8 @@ Data loading and preprocessing utilities.
 Uses the UCI Heart Disease dataset (heart.csv).
 Download: https://www.kaggle.com/datasets/johnsmith88/heart-disease-dataset
 """
-import pandas as pd
-import numpy as np
-from pathlib import Path
 
+import pandas as pd
 
 FEATURE_COLS = [
     "age", "sex", "cp", "trestbps", "chol",

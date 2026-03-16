@@ -1,7 +1,7 @@
 """Unit tests for the training data utilities."""
 import pandas as pd
-import pytest
-from src.training.data_utils import preprocess, FEATURE_COLS
+
+from src.training.data_utils import FEATURE_COLS, preprocess
 
 
 def _make_df(n=10):

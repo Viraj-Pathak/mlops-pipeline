@@ -1,7 +1,8 @@
 """Unit tests for the serving layer (no model loaded — uses mocks)."""
+from unittest.mock import MagicMock
+
 import numpy as np
 import pytest
-from unittest.mock import MagicMock
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +22,7 @@ def mock_artifacts(monkeypatch):
 @pytest.fixture
 def client():
     from fastapi.testclient import TestClient
+
     from src.serving.app import app
     return TestClient(app)
 

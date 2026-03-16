@@ -3,16 +3,15 @@ Train an XGBoost model on the UCI Heart Disease dataset.
 Tracks experiment with MLflow: params, metrics, and model artifact.
 """
 import argparse
+
 import mlflow
 import mlflow.xgboost
-import numpy as np
-import pandas as pd
+import xgboost as xgb
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-import xgboost as xgb
 
-from src.training.data_utils import load_data, preprocess
+from src.training.data_utils import load_data
 
 
 def train(data_path: str, n_estimators: int = 100, max_depth: int = 4, lr: float = 0.1):
@@ -59,7 +58,9 @@ def train(data_path: str, n_estimators: int = 100, max_depth: int = 4, lr: float
         mlflow.xgboost.log_model(model, name="model")
 
         # Save scaler for the serving layer
-        import joblib, os
+        import os
+
+        import joblib
         os.makedirs("models", exist_ok=True)
         joblib.dump(scaler, "models/scaler.joblib")
         mlflow.log_artifact("models/scaler.joblib")
