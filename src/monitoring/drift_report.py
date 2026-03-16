@@ -1,5 +1,5 @@
 """
-Data drift detection using Evidently AI.
+Data drift detection using Evidently AI 0.7+.
 Compares a reference dataset (training data) against a current batch.
 Outputs an HTML report to reports/ and prints a drift summary.
 """
@@ -8,35 +8,47 @@ import json
 import os
 import pandas as pd
 
-from evidently.report import Report
-from evidently.metric_preset import DataDriftPreset, ClassificationPreset
-from evidently.metrics import DatasetDriftMetric
+from evidently import Report, Dataset, DataDefinition
+from evidently.presets import DataDriftPreset
+from evidently.metrics import DriftedColumnsCount
 
 from src.training.data_utils import FEATURE_COLS
 
 
 def run_drift_report(reference_path: str, current_path: str, output_dir: str = "reports"):
-    reference = pd.read_csv(reference_path)[FEATURE_COLS]
-    current = pd.read_csv(current_path)[FEATURE_COLS]
+    reference_df = pd.read_csv(reference_path)[FEATURE_COLS]
+    current_df = pd.read_csv(current_path)[FEATURE_COLS]
 
-    report = Report(metrics=[DataDriftPreset()])
-    report.run(reference_data=reference, current_data=current)
+    reference = Dataset.from_pandas(reference_df, data_definition=DataDefinition())
+    current = Dataset.from_pandas(current_df, data_definition=DataDefinition())
+
+    report = Report(metrics=[DataDriftPreset(), DriftedColumnsCount()])
+    my_run = report.run(reference_data=reference, current_data=current)
 
     os.makedirs(output_dir, exist_ok=True)
     html_path = os.path.join(output_dir, "drift_report.html")
-    report.save_html(html_path)
-    print(f"Drift report saved → {html_path}")
+    my_run.save_html(html_path)
+    print(f"Drift report saved -> {html_path}")
 
-    # Extract summary for CI gate
-    result = report.as_dict()
-    drift_metric = result["metrics"][0]["result"]
-    n_drifted = drift_metric["number_of_drifted_columns"]
-    share_drifted = drift_metric["share_of_drifted_columns"]
+    # Extract summary from Evidently 0.7+ dict structure
+    result_dict = my_run.dict()
+    metrics_list = result_dict.get("metrics", [])
 
+    drifted_cols = None
+    share_drifted = None
+    for m in metrics_list:
+        if "DriftedColumnsCount" in str(m.get("metric_name", "")):
+            val = m.get("value", {})
+            drifted_cols = int(val.get("count", 0))
+            share_drifted = float(val.get("share", 0.0))
+            break
+
+    # Default drift threshold: flag if >30% of features drift
+    drift_threshold = 0.3
     summary = {
-        "n_drifted_features": n_drifted,
-        "share_drifted": round(share_drifted, 3),
-        "drift_detected": drift_metric["dataset_drift"],
+        "n_drifted_features": drifted_cols,
+        "share_drifted": round(share_drifted, 3) if share_drifted is not None else None,
+        "drift_detected": (share_drifted or 0.0) > drift_threshold,
     }
     print(json.dumps(summary, indent=2))
 
@@ -44,11 +56,9 @@ def run_drift_report(reference_path: str, current_path: str, output_dir: str = "
     with open(json_path, "w") as f:
         json.dump(summary, f, indent=2)
 
-    # Fail fast if drift is detected (useful for CI)
     if summary["drift_detected"]:
         raise SystemExit(
-            f"DRIFT DETECTED: {n_drifted} features drifted "
-            f"({share_drifted:.0%}). Trigger retraining."
+            f"DRIFT DETECTED: {drifted_cols} features drifted. Trigger retraining."
         )
 
 

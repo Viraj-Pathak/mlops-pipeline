@@ -12,7 +12,7 @@ from pydantic import BaseModel, Field
 
 # ── Config ───────────────────────────────────────────────────────────────────
 MLFLOW_TRACKING_URI = os.getenv("MLFLOW_TRACKING_URI", "sqlite:///mlruns/mlflow.db")
-MODEL_URI = os.getenv("MODEL_URI", "models:/heart-disease-prediction/Production")
+MODEL_URI = os.getenv("MODEL_URI", "models:/heart-disease-prediction@Production")
 SCALER_PATH = os.getenv("SCALER_PATH", "models/scaler.joblib")
 
 _model = None
