@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# ML artifacts (tracked by DVC, not git)
+data/raw/
+data/processed/
+models/*.joblib
+mlruns/
+
+# Reports (generated)
+reports/
+
+# IDE
+.vscode/
+.idea/
+
+# Env
+.env
+*.env
